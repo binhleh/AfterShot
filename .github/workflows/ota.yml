@@ -1,0 +1,30 @@
+name: Cập nhật nội dung (version.json)
+
+# Mỗi lần bạn sửa/thay file trong www/, workflow này tính lại www/version.json.
+# App Android thấy version.json mới sẽ tải các file đổi về, không cần cài lại APK.
+on:
+  push:
+    branches: ["main", "master"]
+    paths:
+      - "www/**"
+      - "!www/version.json"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/make-version.js
+      - name: Lưu version.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add www/version.json
+          if git diff --cached --quiet; then echo "Không có thay đổi"; else git commit -m "Cập nhật version.json [skip ci]" && git push; fi
