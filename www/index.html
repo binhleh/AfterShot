@@ -2738,9 +2738,13 @@ if(!LOOKS_OK) setTimeout(function(){ toast("Không tải được looks.js, đan
   var standalone=(window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone===true;
   var ios=/iphone|ipad|ipod/i.test(navigator.userAgent) && !standalone;
   var ib=$("installBtn"), dip=null;
-  if(standalone) ib.hidden=true;
+  var APK="https://github.com/binhleh/AfterShot/releases/latest/download/AfterShot.apk";
+  var droid=/android/i.test(navigator.userAgent) && !NATIVE;
+  if(standalone || NATIVE) ib.hidden=true;
+  if(droid) ib.textContent="Tải app Android";
   window.addEventListener("beforeinstallprompt",function(e){ e.preventDefault(); dip=e; });
   ib.addEventListener("click",function(){
+    if(droid){ location.href=APK; toast("Đang tải app Android. Mở file vừa tải để cài đặt"); return; }
     if(dip){ dip.prompt(); dip.userChoice.then(function(){ dip=null; }); return; }
     if(ios) toast("Bấm nút Chia sẻ, rồi chọn Thêm vào Màn hình chính");
     else if(location.protocol!=="https:" && location.hostname!=="localhost") toast("Cần mở trang bằng HTTPS để cài ứng dụng");

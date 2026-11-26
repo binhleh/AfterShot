@@ -4,6 +4,14 @@ on:
   workflow_dispatch:
   push:
     tags: ["v*"]
+    branches: [main, master]
+    paths:
+      - "package.json"
+      - "capacitor.config.json"
+      - "resources/**"
+      - "tools/patch-android.js"
+      - "www/sw.js"
+      - "www/ota-config.js"
 
 permissions:
   contents: write
@@ -65,6 +73,7 @@ jobs:
           APK=$(find android/app/build/outputs/apk/release -name "*.apk" | head -n1)
           test -n "$APK"
           cp "$APK" "AfterShot-$VER.apk"
+          cp "$APK" AfterShot.apk
           echo "APK=AfterShot-$VER.apk" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@v4
@@ -77,4 +86,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="apk-$VER"
-          gh release create "$TAG" "$APK" --title "AfterShot $VER" --notes "Bản cài Android. Sau khi cài, các thay đổi giao diện/bộ màu cập nhật ngay trong app." --latest || gh release upload "$TAG" "$APK" --clobber
+          gh release create "$TAG" "$APK" AfterShot.apk --title "AfterShot $VER" --notes "Bản cài Android. Sau khi cài, các thay đổi giao diện/bộ màu cập nhật ngay trong app." --latest || gh release upload "$TAG" "$APK" AfterShot.apk --clobber
