@@ -31,7 +31,11 @@ fs.copyFileSync(path.join(IC, "ic_launcher_background.xml"), path.join(RES, "val
 // 3. nền màn hình khởi động tối
 const sf = path.join(RES, "values/styles.xml");
 let st = rd(sf); must(st, /@drawable\/splash/, "splash");
-wr(sf, st.replace("@drawable/splash", "#08090B"));
+st = st.replace("@drawable/splash", "#08090B");
+// thanh trạng thái/điều hướng tối, biểu tượng sáng; nền cửa sổ tối để vùng đệm không bị trắng
+must(st, /<item name="android:background">@null<\/item>/, "AppTheme.NoActionBar");
+st = st.replace('<item name="android:background">@null</item>', '<item name="android:background">@null</item>\n        <item name="android:windowBackground">#08090B</item>\n        <item name="android:statusBarColor">#08090B</item>\n        <item name="android:navigationBarColor">#08090B</item>\n        <item name="android:windowLightStatusBar">false</item>\n        <item name="android:windowLightNavigationBar">false</item>');
+wr(sf, st);
 
 // 4. quyền camera (chụp bằng camera trong app)
 const mf = path.join(A, "app/src/main/AndroidManifest.xml");

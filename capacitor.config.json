@@ -3,6 +3,11 @@
   "appName": "AfterShot",
   "webDir": "www",
   "backgroundColor": "#08090B",
-  "server": { "androidScheme": "https" },
-  "android": { "allowMixedContent": false }
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false,
+    "adjustMarginsForEdgeToEdge": "force"
+  }
 }
