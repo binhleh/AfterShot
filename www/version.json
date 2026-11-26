@@ -1,5 +1,5 @@
 {
- "v": "2026.11.26-0817",
+ "v": "2026.11.26-0908",
  "minShell": 1,
  "files": {
   "apple-touch-icon.png": "44180262d07f",
@@ -9,7 +9,7 @@
   "icons/icon-192.png": "1357ea89fae7",
   "icons/icon-512.png": "68c9ce586951",
   "icons/icon-maskable-512.png": "d5237ec20473",
-  "index.html": "96873618abd8",
+  "index.html": "108f09f6791e",
   "jszip.min.js": "c96375d50e72",
   "logo-512.png": "68c9ce586951",
   "logo-glyph.svg": "299ab9291fb9",
