@@ -458,6 +458,7 @@ input[type=range]::-moz-range-thumb{width:34px;height:20px;border-radius:10px;ba
 .cam-last img{display:block;width:100%;height:100%;object-fit:cover}
 .cam-last b{position:absolute;right:3px;bottom:3px;min-width:18px;padding:1px 5px;border-radius:9px;background:var(--accent);color:#fff;font-size:11px;line-height:16px;text-align:center}
 .cam-done{justify-self:end;grid-column:3}
+.cam-native{grid-column:2;justify-self:center;font-size:12px;padding:6px 12px;color:#f4f2ee;background:rgba(255,255,255,.1);border-color:transparent}
 .cam-bar .cam-flip{justify-self:end;width:46px;height:46px;border-radius:50%}
 .cam-done[hidden]{display:none}
 @media (min-width:900px){ .cam-look{flex-direction:row} .cam-groups,.cam-looks{justify-content:center} }
@@ -807,6 +808,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:22px;border-radius:0;backg
 <div id="cam" hidden role="dialog" aria-modal="true" aria-label="Máy ảnh">
   <div class="cam-top">
     <button class="icon-btn" id="camClose" type="button" aria-label="Đóng máy ảnh" title="Đóng"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <button class="pill cam-native" id="camNative" type="button">Máy ảnh gốc</button>
     <button class="btn primary cam-done" id="camDone" type="button" hidden>Xong</button>
   </div>
   <div class="cam-stage">
@@ -1611,7 +1613,7 @@ function buildFrame(g){
 
   var det=document.createElement("details"); det.className="fr-det"; det.id="fr-det";
   try{ det.open=window.matchMedia("(min-width:900px)").matches; }catch(e){}
-  det.appendChild(mkEl("summary","","Thông số ảnh (tiếng Anh)"));
+  det.appendChild(mkEl("summary","","Thông số ảnh"));
   var fb=mkEl("div","fr-body"); det.appendChild(fb);
   var grid=mkEl("div","fr-grid");
   FR_FIELDS.forEach(function(f){
@@ -2984,7 +2986,10 @@ function camClose(){
     if(location.hash!=="#chinh-anh") location.hash="chinh-anh";
   });
 }
+var CAM_ON=!!(window.Capacitor && typeof Capacitor.isNativePlatform==="function" && Capacitor.isNativePlatform()) && /android/i.test(navigator.userAgent||"");
+(function(){ ["heroCam","camBtn"].forEach(function(id){ var b=$(id); if(b) b.hidden=!CAM_ON; }); })();
 function camOpen(){
+  if(!CAM_ON) return;
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){ $("camFile").click(); return; }
   var lk=allLooks().filter(function(l){ return l.id===activeId; })[0] || lookById("goc");
   CAM.open=true; CAM.queue=[]; CAM.startId=lk.id; CAM.look=lk; CAM.gid=groupOf(lk); CAM.face="environment"; CAM.devId=null; CAM.mainTried=false;
@@ -2997,6 +3002,7 @@ $("heroCam").addEventListener("click",camOpen);
 $("camBtn").addEventListener("click",camOpen);
 $("camClose").addEventListener("click",camClose);
 $("camDone").addEventListener("click",camClose);
+$("camNative").addEventListener("click",function(){ camClose(); $("camFile").click(); });
 $("camShot").addEventListener("click",camShot);
 $("camFlip").addEventListener("click",function(){ CAM.face=CAM.face==="user" ? "environment" : "user"; CAM.devId=null; CAM.mainTried=(CAM.face==="user"); camStart(); });
 document.addEventListener("keydown",function(e){
