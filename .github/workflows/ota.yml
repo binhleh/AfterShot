@@ -13,6 +13,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: ota-version
+  cancel-in-progress: false
+
 jobs:
   version:
     runs-on: ubuntu-latest
@@ -27,4 +31,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add www/version.json
-          if git diff --cached --quiet; then echo "Không có thay đổi"; else git commit -m "Cập nhật version.json [skip ci]" && git push; fi
+          if git diff --cached --quiet; then echo "Không có thay đổi"; exit 0; fi
+          git commit -m "Cập nhật version.json [skip ci]"
+          for i in 1 2 3 4; do
+            git push && exit 0
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase -X theirs "origin/${GITHUB_REF_NAME}" || { git rebase --abort; git reset --hard "origin/${GITHUB_REF_NAME}"; node tools/make-version.js; git add www/version.json; git commit -m "Cập nhật version.json [skip ci]"; }
+          done
+          exit 1
