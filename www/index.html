@@ -2401,12 +2401,20 @@ var standalone=!(window.claude && typeof window.claude.use==="function");
 function saveLabel(){ return (downloads||standalone) ? "Lưu ảnh này" : "Xuất ảnh này"; }
 var NATIVE=!!(window.Capacitor && typeof Capacitor.isNativePlatform==="function" && Capacitor.isNativePlatform());
 async function nativeDeliver(blob,filename){
-  var P=(window.Capacitor&&Capacitor.Plugins)||{}, FS=P.Filesystem, SH=P.Share;
+  var P=(window.Capacitor&&Capacitor.Plugins)||{}, FS=P.Filesystem, SH=P.Share, AM=P.AfterShotMedia;
+  var isImg=/\.(jpg|jpeg|png|webp)$/i.test(filename), saved=false;
   if(!FS||!SH) throw {code:"unavailable"};
   var b64=await new Promise(function(res,rej){ var r=new FileReader(); r.onload=function(){ res(String(r.result).split(",")[1]||""); }; r.onerror=function(){ rej(r.error); }; r.readAsDataURL(blob); });
+  /* app Android moi: luu thang vao Thu vien (album AfterShot), nhu "Luu hinh anh" tren iPhone */
+  if(AM && isImg){
+    try{ await AM.saveImage({data:b64,name:filename,mime:blob.type||"image/jpeg"}); saved=true; toast("Đã lưu vào Thư viện (album AfterShot)"); }catch(e){}
+  }
   var w=await FS.writeFile({path:"aftershot/"+filename,data:b64,directory:"CACHE",recursive:true});
-  try{ await SH.share({title:filename,files:[w.uri],dialogTitle:"Lưu ảnh"}); }
-  catch(e){ if(/cancel/i.test(String((e&&e.message)||e))) throw {code:"declined"}; throw {code:"sheet"}; }
+  try{ await SH.share({title:filename,files:[w.uri],dialogTitle:saved ? "Gửi ảnh" : "Lưu ảnh"}); }
+  catch(e){
+    if(saved) return;
+    if(/cancel/i.test(String((e&&e.message)||e))) throw {code:"declined"}; throw {code:"sheet"};
+  }
 }
 async function deliver(blob,filename){
   if(NATIVE){ await nativeDeliver(blob,filename); return; }

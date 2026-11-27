@@ -45,6 +45,75 @@ if (!m.includes("android.permission.CAMERA")) {
   wr(mf, m);
 }
 
+// 6. plugin nhỏ: lưu ảnh thẳng vào Thư viện (MediaStore, album Pictures/AfterShot), không cần xin quyền
+const JD = path.join(A, "app/src/main/java/vn/io/binhle/aftershot");
+fs.mkdirSync(JD, { recursive: true });
+wr(path.join(JD, "AfterShotMediaPlugin.java"), `package vn.io.binhle.aftershot;
+
+import android.content.ContentResolver;
+import android.content.ContentValues;
+import android.net.Uri;
+import android.os.Build;
+import android.provider.MediaStore;
+import android.util.Base64;
+import com.getcapacitor.JSObject;
+import com.getcapacitor.Plugin;
+import com.getcapacitor.PluginCall;
+import com.getcapacitor.PluginMethod;
+import com.getcapacitor.annotation.CapacitorPlugin;
+import java.io.OutputStream;
+
+@CapacitorPlugin(name = "AfterShotMedia")
+public class AfterShotMediaPlugin extends Plugin {
+    @PluginMethod
+    public void saveImage(PluginCall call) {
+        String data = call.getString("data");
+        String name = call.getString("name", "aftershot.jpg");
+        String mime = call.getString("mime", "image/jpeg");
+        if (data == null || data.isEmpty()) { call.reject("no_data"); return; }
+        if (Build.VERSION.SDK_INT < 29) { call.reject("android_old"); return; }
+        Uri uri = null;
+        ContentResolver r = getContext().getContentResolver();
+        try {
+            byte[] bytes = Base64.decode(data, Base64.DEFAULT);
+            ContentValues v = new ContentValues();
+            v.put(MediaStore.Images.Media.DISPLAY_NAME, name);
+            v.put(MediaStore.Images.Media.MIME_TYPE, mime);
+            v.put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/AfterShot");
+            v.put(MediaStore.Images.Media.IS_PENDING, 1);
+            uri = r.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, v);
+            if (uri == null) { call.reject("insert_failed"); return; }
+            OutputStream o = r.openOutputStream(uri);
+            if (o == null) { call.reject("open_failed"); return; }
+            o.write(bytes);
+            o.close();
+            ContentValues d = new ContentValues();
+            d.put(MediaStore.Images.Media.IS_PENDING, 0);
+            r.update(uri, d, null, null);
+            JSObject res = new JSObject();
+            res.put("uri", uri.toString());
+            call.resolve(res);
+        } catch (Exception e) {
+            if (uri != null) { try { r.delete(uri, null, null); } catch (Exception x) { } }
+            call.reject(String.valueOf(e.getMessage()));
+        }
+    }
+}
+`);
+wr(path.join(JD, "MainActivity.java"), `package vn.io.binhle.aftershot;
+
+import android.os.Bundle;
+import com.getcapacitor.BridgeActivity;
+
+public class MainActivity extends BridgeActivity {
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        registerPlugin(AfterShotMediaPlugin.class);
+        super.onCreate(savedInstanceState);
+    }
+}
+`);
+
 // 5. sw.js: đổi VERSION theo bản build để APK mới bỏ cache cũ
 if (process.env.BUILD_VERSION) {
   const sw = path.join(ROOT, "www/sw.js");
