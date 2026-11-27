@@ -1,7 +1,7 @@
 /* Cấu hình cập nhật trong app. Workflow tự điền repo khi build APK.
    repo: "tên-github/tên-kho" (kho phải công khai). shell: số thứ tự của "vỏ" APK; chỉ tăng khi phần native đổi.
    File này KHÔNG được cập nhật qua OTA (nằm trong APK), nên phần canh lỗi bên dưới luôn là bản gốc. */
-window.AS_OTA = { repo: "OWNER/REPO", branch: "main", shell: 1 };
+window.AS_OTA = { repo: "OWNER/REPO", branch: "main", shell: 2 };
 
 /* Canh lỗi: bản OTA vừa tải mà báo lỗi trong 8 giây đầu thì xóa OTA, quay về bản đóng gói trong APK. */
 (function () {

@@ -1,6 +1,6 @@
 {
   "name": "aftershot-android",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "description": "AfterShot - vỏ Android (Capacitor) bọc web, cập nhật nội dung qua GitHub",
   "dependencies": {
@@ -11,5 +11,5 @@
     "@capacitor/share": "^7.0.0",
     "@capacitor/device": "^7.0.0"
   },
-  "aftershotShell": 1
+  "aftershotShell": 2
 }
