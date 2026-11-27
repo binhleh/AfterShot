@@ -859,7 +859,7 @@ input[type=range]::-moz-range-thumb{width:14px;height:22px;border-radius:0;backg
       <div class="exp-sum" id="exSum" aria-live="polite"></div>
       <p class="cnote" id="exNote"></p>
     </div>
-    <div class="exp-foot"><button class="btn" id="exCancel" type="button">Hủy</button><button class="btn primary" id="exGo" type="button">Tải về</button></div>
+    <div class="exp-foot"><button class="btn" id="exCancel" type="button">Hủy</button><button class="btn" id="exShare" type="button" hidden>Chia sẻ</button><button class="btn primary" id="exGo" type="button">Tải về</button></div>
   </div>
 </div>
 
@@ -2307,6 +2307,7 @@ function openExport(kind,toneOff){
   var sz=outSize(ph.nw,ph.nh); EX.nat=ph.sample ? [1500,2000] : sz;
   $("expT").textContent=kind==="zip" ? "Xuất "+photos.length+" ảnh" : "Xuất ảnh";
   $("exGo").textContent=kind==="zip" ? "Tải tất cả (.zip)" : "Tải về";
+  $("exShare").hidden=!(NATIVE && kind!=="zip");
   $("exp").hidden=false;
   syncExport(); exSoon();
 }
@@ -2343,6 +2344,10 @@ function buildExport(){
   $("exCancel").addEventListener("click",closeExport);
   $("exp").addEventListener("click",function(e){ if(e.target===$("exp")) closeExport(); });
   document.addEventListener("keydown",function(e){ if(e.key==="Escape" && EX.open) closeExport(); });
+  $("exShare").addEventListener("click",function(){
+    if(!EX.blob) return;
+    var blob=EX.blob; closeExport(); saveOneGo(blob,"share");
+  });
   $("exGo").addEventListener("click",function(){
     if(!EX.blob) return;
     var kind=EX.kind, blob=EX.blob;
@@ -2400,24 +2405,25 @@ function lookSlug(){
 var standalone=!(window.claude && typeof window.claude.use==="function");
 function saveLabel(){ return (downloads||standalone) ? "Lưu ảnh này" : "Xuất ảnh này"; }
 var NATIVE=!!(window.Capacitor && typeof Capacitor.isNativePlatform==="function" && Capacitor.isNativePlatform());
-async function nativeDeliver(blob,filename){
+var noAMHint=false;
+async function nativeDeliver(blob,filename,mode){
   var P=(window.Capacitor&&Capacitor.Plugins)||{}, FS=P.Filesystem, SH=P.Share, AM=P.AfterShotMedia;
-  var isImg=/\.(jpg|jpeg|png|webp)$/i.test(filename), saved=false;
+  var isImg=/\.(jpg|jpeg|png|webp)$/i.test(filename);
   if(!FS||!SH) throw {code:"unavailable"};
   var b64=await new Promise(function(res,rej){ var r=new FileReader(); r.onload=function(){ res(String(r.result).split(",")[1]||""); }; r.onerror=function(){ rej(r.error); }; r.readAsDataURL(blob); });
-  /* app Android moi: luu thang vao Thu vien (album AfterShot), nhu "Luu hinh anh" tren iPhone */
-  if(AM && isImg){
-    try{ await AM.saveImage({data:b64,name:filename,mime:blob.type||"image/jpeg"}); saved=true; toast("Đã lưu vào Thư viện (album AfterShot)"); }catch(e){}
+  /* luu thang vao Thu vien (album AfterShot), khong can hop chia se */
+  if(mode!=="share" && isImg){
+    if(AM){
+      try{ await AM.saveImage({data:b64,name:filename,mime:blob.type||"image/jpeg"}); return "gallery"; }
+      catch(e){ toast("Không lưu được vào Thư viện ("+String((e&&e.message)||e).slice(0,60)+"). Mở hộp chia sẻ thay thế."); await new Promise(function(r){ setTimeout(r,1200); }); }
+    }else if(!noAMHint){ noAMHint=true; toast("Cần cài APK mới nhất để lưu thẳng vào Thư viện"); await new Promise(function(r){ setTimeout(r,1500); }); }
   }
   var w=await FS.writeFile({path:"aftershot/"+filename,data:b64,directory:"CACHE",recursive:true});
-  try{ await SH.share({title:filename,files:[w.uri],dialogTitle:saved ? "Gửi ảnh" : "Lưu ảnh"}); }
-  catch(e){
-    if(saved) return;
-    if(/cancel/i.test(String((e&&e.message)||e))) throw {code:"declined"}; throw {code:"sheet"};
-  }
+  try{ await SH.share({title:filename,files:[w.uri],dialogTitle:mode==="share" ? "Gửi ảnh" : "Lưu ảnh"}); return "share"; }
+  catch(e){ if(/cancel/i.test(String((e&&e.message)||e))) throw {code:"declined"}; throw {code:"sheet"}; }
 }
-async function deliver(blob,filename){
-  if(NATIVE){ await nativeDeliver(blob,filename); return; }
+async function deliver(blob,filename,mode){
+  if(NATIVE){ return await nativeDeliver(blob,filename,mode); }
   if(downloads){ await downloads.save({filename:filename,data:blob}); return; }
   if(!standalone) throw {code:"unavailable"};
   var isImg=/\.(jpg|png|webp)$/.test(filename), mobile=/iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
@@ -2457,15 +2463,16 @@ function openSheet(blob){
 }
 function saveOne(){ if(busy) return; openExport("one",false); }
 function saveAll(){ if(busy||!(downloads||standalone)||!window.JSZip) return; openExport("zip",false); }
-async function saveOneGo(blob){
+async function saveOneGo(blob,mode){
   var ph=photos[cur];
   setBusy(true);
   try{
     if(!downloads && !standalone){ openSheet(blob); return; }
     try{
-      await deliver(blob, ph.name+"-"+(EX.tone?lookSlug():"nen")+extOf(blob));
-      if(cur<photos.length-1){ cur++; renderPhotos(); renderLooks(); draw(); toast("Đã lưu. Chuyển sang ảnh tiếp theo."); }
-      else toast(photos.length>1 ? "Đã lưu ảnh cuối cùng" : "Đã lưu");
+      var how=await deliver(blob, ph.name+"-"+(EX.tone?lookSlug():"nen")+extOf(blob), mode);
+      var g=(how==="gallery") ? " vào Thư viện (Pictures/AfterShot)" : "";
+      if(cur<photos.length-1){ cur++; renderPhotos(); renderLooks(); draw(); toast("Đã lưu"+g+". Chuyển sang ảnh tiếp theo."); }
+      else toast(photos.length>1 ? "Đã lưu ảnh cuối cùng"+g : "Đã lưu"+g);
     }catch(e){
       if(!saveError(e)) openSheet(blob);
     }
